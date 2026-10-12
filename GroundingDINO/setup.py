@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2022 The IDEA Authors. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +35,11 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 
 sha = "Unknown"
 try:
-    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=cwd).decode("ascii").strip()
+    sha = (
+        subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=cwd)
+        .decode("ascii")
+        .strip()
+    )
 except Exception:
     pass
 
@@ -55,7 +58,9 @@ torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 
 def get_extensions():
     this_dir = os.path.dirname(os.path.abspath(__file__))
-    extensions_dir = os.path.join(this_dir, "groundingdino", "models", "GroundingDINO", "csrc")
+    extensions_dir = os.path.join(
+        this_dir, "groundingdino", "models", "GroundingDINO", "csrc"
+    )
 
     main_source = os.path.join(extensions_dir, "vision.cpp")
     sources = glob.glob(os.path.join(extensions_dir, "**", "*.cpp"))
@@ -69,16 +74,17 @@ def get_extensions():
     # It solves https://github.com/IDEA-Research/Grounded-Segment-Anything/issues/53
     # and https://github.com/IDEA-Research/Grounded-Segment-Anything/issues/84 when running
     # inside a Docker container.
-    am_i_docker = os.environ.get('AM_I_DOCKER', '').casefold() in ['true', '1', 't']
-    use_cuda = os.environ.get('BUILD_WITH_CUDA', '').casefold() in ['true', '1', 't']
+    am_i_docker = os.environ.get("AM_I_DOCKER", "").casefold() in ["true", "1", "t"]
+    use_cuda = os.environ.get("BUILD_WITH_CUDA", "").casefold() in ["true", "1", "t"]
 
     extension = CppExtension
 
     extra_compile_args = {"cxx": []}
     define_macros = []
 
-    if (torch.cuda.is_available() and CUDA_HOME is not None) or \
-            (am_i_docker and use_cuda):
+    if (torch.cuda.is_available() and CUDA_HOME is not None) or (
+        am_i_docker and use_cuda
+    ):
         print("Compiling with CUDA")
         extension = CUDAExtension
         sources += source_cuda
@@ -159,13 +165,13 @@ def parse_requirements(fname="requirements.txt", with_version=True):
                         version, platform_deps = map(str.strip, rest.split(";"))
                         info["platform_deps"] = platform_deps
                     else:
-                        version = rest  # NOQA
+                        version = rest
                     info["version"] = (op, version)
             yield info
 
     def parse_require_file(fpath):
         with open(fpath, "r") as f:
-            for line in f.readlines():
+            for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):
                     for info in parse_line(line):

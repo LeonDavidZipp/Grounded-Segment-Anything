@@ -1,15 +1,17 @@
 # !pip install diffusers transformers
 
+from io import BytesIO
+
 import PIL
 import requests
 import torch
-from io import BytesIO
 from diffusers import DiffusionPipeline
-
 
 """
 Step 1: Download demo images
 """
+
+
 def download_image(url):
     response = requests.get(url)
     return PIL.Image.open(BytesIO(response.content)).convert("RGB")
@@ -44,8 +46,8 @@ pipe = pipe.to("cuda:1")
 Step 3: Run PaintByExample pipeline and save image
 """
 image = pipe(
-    image=init_image, 
-    mask_image=mask_image, 
+    image=init_image,
+    mask_image=mask_image,
     example_image=example_image,
     num_inference_steps=200,
 ).images[0]

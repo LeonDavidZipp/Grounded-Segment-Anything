@@ -16,15 +16,13 @@
 Backbone modules.
 """
 
-from typing import Dict, List
-
 import torch
 import torch.nn.functional as F
 import torchvision
 from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 
-from groundingdino.util.misc import NestedTensor, clean_state_dict, is_main_process
+from groundingdino.util.misc import NestedTensor, is_main_process
 
 from .position_encoding import build_position_encoding
 from .swin_transformer import build_swin_transformer
@@ -40,21 +38,34 @@ class FrozenBatchNorm2d(torch.nn.Module):
     """
 
     def __init__(self, n):
-        super(FrozenBatchNorm2d, self).__init__()
+        super().__init__()
         self.register_buffer("weight", torch.ones(n))
         self.register_buffer("bias", torch.zeros(n))
         self.register_buffer("running_mean", torch.zeros(n))
         self.register_buffer("running_var", torch.ones(n))
 
     def _load_from_state_dict(
-        self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
     ):
         num_batches_tracked_key = prefix + "num_batches_tracked"
         if num_batches_tracked_key in state_dict:
             del state_dict[num_batches_tracked_key]
 
-        super(FrozenBatchNorm2d, self)._load_from_state_dict(
-            state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
         )
 
     def forward(self, x):
@@ -91,7 +102,7 @@ class BackboneBase(nn.Module):
         return_layers = {}
         for idx, layer_index in enumerate(return_interm_indices):
             return_layers.update(
-                {"layer{}".format(5 - len(return_interm_indices) + idx): "{}".format(layer_index)}
+                {f"layer{5 - len(return_interm_indices) + idx}": f"{layer_index}"}
             )
 
         # if len:
@@ -106,7 +117,7 @@ class BackboneBase(nn.Module):
 
     def forward(self, tensor_list: NestedTensor):
         xs = self.body(tensor_list.tensors)
-        out: Dict[str, NestedTensor] = {}
+        out: dict[str, NestedTensor] = {}
         for name, x in xs.items():
             m = tensor_list.mask
             assert m is not None
@@ -134,9 +145,11 @@ class Backbone(BackboneBase):
                 norm_layer=batch_norm,
             )
         else:
-            raise NotImplementedError("Why you can get here with name {}".format(name))
+            raise NotImplementedError(f"Why you can get here with name {name}")
         # num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
-        assert name not in ("resnet18", "resnet34"), "Only resnet50 and resnet101 are available."
+        assert name not in ("resnet18", "resnet34"), (
+            "Only resnet50 and resnet101 are available."
+        )
         assert return_interm_indices in [[0, 1, 2, 3], [1, 2, 3], [3]]
         num_channels_all = [256, 512, 1024, 2048]
         num_channels = num_channels_all[4 - len(return_interm_indices) :]
@@ -149,7 +162,7 @@ class Joiner(nn.Sequential):
 
     def forward(self, tensor_list: NestedTensor):
         xs = self[0](tensor_list)
-        out: List[NestedTensor] = []
+        out: list[NestedTensor] = []
         pos = []
         for name, x in xs.items():
             out.append(x)
@@ -206,16 +219,16 @@ def build_backbone(args):
 
         bb_num_channels = backbone.num_features[4 - len(return_interm_indices) :]
     else:
-        raise NotImplementedError("Unknown backbone {}".format(args.backbone))
+        raise NotImplementedError(f"Unknown backbone {args.backbone}")
 
-    assert len(bb_num_channels) == len(
-        return_interm_indices
-    ), f"len(bb_num_channels) {len(bb_num_channels)} != len(return_interm_indices) {len(return_interm_indices)}"
+    assert len(bb_num_channels) == len(return_interm_indices), (
+        f"len(bb_num_channels) {len(bb_num_channels)} != len(return_interm_indices) {len(return_interm_indices)}"
+    )
 
     model = Joiner(backbone, position_embedding)
     model.num_channels = bb_num_channels
-    assert isinstance(
-        bb_num_channels, List
-    ), "bb_num_channels is expected to be a List but {}".format(type(bb_num_channels))
+    assert isinstance(bb_num_channels, list), (
+        f"bb_num_channels is expected to be a List but {type(bb_num_channels)}"
+    )
     # import ipdb; ipdb.set_trace()
     return model

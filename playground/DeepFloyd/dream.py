@@ -3,11 +3,13 @@ from deepfloyd_if.modules.t5 import T5Embedder
 from deepfloyd_if.pipelines import dream
 
 # Run locally
-device = 'cuda'
+device = "cuda"
 cache_dir = "/path/to/storage/IF"
-if_I = IFStageI('IF-I-L-v1.0', device=device, cache_dir=cache_dir)
-if_II = IFStageII('IF-II-L-v1.0', device=device, cache_dir=cache_dir)
-if_III = StableStageIII('stable-diffusion-x4-upscaler', device=device, cache_dir=cache_dir)
+if_I = IFStageI("IF-I-L-v1.0", device=device, cache_dir=cache_dir)
+if_II = IFStageII("IF-II-L-v1.0", device=device, cache_dir=cache_dir)
+if_III = StableStageIII(
+    "stable-diffusion-x4-upscaler", device=device, cache_dir=cache_dir
+)
 t5 = T5Embedder(device=device, cache_dir=cache_dir)
 
 prompt = "In the heart of the wilderness, an enchanting forest reveals itself. \
@@ -18,8 +20,11 @@ prompt = "In the heart of the wilderness, an enchanting forest reveals itself. \
 count = 1
 
 result = dream(
-    t5=t5, if_I=if_I, if_II=if_II, if_III=if_III,
-    prompt=[prompt]*count,
+    t5=t5,
+    if_I=if_I,
+    if_II=if_II,
+    if_III=if_III,
+    prompt=[prompt] * count,
     seed=42,
     if_I_kwargs={
         "guidance_scale": 7.0,
@@ -35,5 +40,4 @@ result = dream(
         "sample_timestep_respacing": "75",
     },
 )
-result['III'][0].save("./dream_figure.jpg")
-
+result["III"][0].save("./dream_figure.jpg")

@@ -4,13 +4,17 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import torch
-
 from functools import partial
 
-from segment_anything.modeling import ImageEncoderViT, MaskDecoder, PromptEncoder, Sam, TwoWayTransformer
+import torch
 from EdgeSAM.rep_vit import RepViT
-
+from segment_anything.modeling import (
+    ImageEncoderViT,
+    MaskDecoder,
+    PromptEncoder,
+    Sam,
+    TwoWayTransformer,
+)
 
 prompt_embed_dim = 256
 image_size = 1024
@@ -19,11 +23,7 @@ image_embedding_size = image_size // vit_patch_size
 
 
 def build_edge_sam(checkpoint=None, upsample_mode="bicubic"):
-    image_encoder = RepViT(
-        arch="m1",
-        img_size=image_size,
-        upsample_mode=upsample_mode
-    )
+    image_encoder = RepViT(arch="m1", img_size=image_size, upsample_mode=upsample_mode)
     return _build_sam(image_encoder, checkpoint)
 
 
@@ -31,6 +31,7 @@ sam_model_registry = {
     "default": build_edge_sam,
     "edge_sam": build_edge_sam,
 }
+
 
 def _build_sam_encoder(
     encoder_embed_dim,

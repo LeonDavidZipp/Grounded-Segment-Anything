@@ -1,19 +1,16 @@
-import data
 import cv2
+import data
 import torch
-from PIL import Image, ImageDraw
-from tqdm import tqdm
 from models import imagebind_model
 from models.imagebind_model import ModalityType
-
-from segment_anything import build_sam, SamAutomaticMaskGenerator
-
+from PIL import Image, ImageDraw
+from segment_anything import SamAutomaticMaskGenerator, build_sam
+from tqdm import tqdm
 from utils import (
-    segment_image, 
     convert_box_xywh_to_xyxy,
     get_indices_of_values_above_threshold,
+    segment_image,
 )
-
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -48,7 +45,11 @@ Step 3: Get cropped images based on mask and box
 cropped_boxes = []
 image = Image.open(image_path)
 for mask in tqdm(masks):
-    cropped_boxes.append(segment_image(image, mask["segmentation"]).crop(convert_box_xywh_to_xyxy(mask["bbox"])))
+    cropped_boxes.append(
+        segment_image(image, mask["segmentation"]).crop(
+            convert_box_xywh_to_xyxy(mask["bbox"])
+        )
+    )
 
 
 """
@@ -62,9 +63,12 @@ image_list = []
 image_list += cropped_boxes
 image_list.append(referring_image)
 
+
 def retriev_vision_and_vision(elements):
     inputs = {
-        ModalityType.VISION: data.load_and_transform_vision_data_from_pil_image(elements, device),
+        ModalityType.VISION: data.load_and_transform_vision_data_from_pil_image(
+            elements, device
+        ),
     }
     with torch.no_grad():
         embeddings = bind_model(inputs)
@@ -73,7 +77,9 @@ def retriev_vision_and_vision(elements):
     cropped_box_embeddings = embeddings[ModalityType.VISION][:-1, :]
     referring_image_embeddings = embeddings[ModalityType.VISION][-1, :]
 
-    vision_referring_result = torch.softmax(cropped_box_embeddings @ referring_image_embeddings.T, dim=0),
+    vision_referring_result = (
+        torch.softmax(cropped_box_embeddings @ referring_image_embeddings.T, dim=0),
+    )
     return vision_referring_result  # [113, 1]
 
 
@@ -94,17 +100,19 @@ index = get_indices_of_values_above_threshold(vision_referring_result[0], thresh
 
 segmentation_masks = []
 for seg_idx in index:
-    segmentation_mask_image = Image.fromarray(masks[seg_idx]["segmentation"].astype('uint8') * 255)
+    segmentation_mask_image = Image.fromarray(
+        masks[seg_idx]["segmentation"].astype("uint8") * 255
+    )
     segmentation_masks.append(segmentation_mask_image)
 
 original_image = Image.open(image_path)
-overlay_image = Image.new('RGBA', image.size, (0, 0, 0, 255))
+overlay_image = Image.new("RGBA", image.size, (0, 0, 0, 255))
 overlay_color = (255, 255, 255, 0)
 
 draw = ImageDraw.Draw(overlay_image)
 for segmentation_mask_image in segmentation_masks:
     draw.bitmap((0, 0), segmentation_mask_image, fill=overlay_color)
 
-# return Image.alpha_composite(original_image.convert('RGBA'), overlay_image) 
+# return Image.alpha_composite(original_image.convert('RGBA'), overlay_image)
 mask_image = overlay_image.convert("RGB")
 mask_image.save("./image_referring_sam_merged_mask.jpg")

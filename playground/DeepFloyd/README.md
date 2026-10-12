@@ -88,11 +88,11 @@ import torch
 cache_dir = "path/to/specific_dir"
 # stage 1
 stage_1 = DiffusionPipeline.from_pretrained(
-    "DeepFloyd/IF-I-XL-v1.0", 
-    variant="fp16", 
+    "DeepFloyd/IF-I-XL-v1.0",
+    variant="fp16",
     torch_dtype=torch.float16,
-    cache_dir=cache_dir  # loading model from specific dir
-  )
+    cache_dir=cache_dir,  # loading model from specific dir
+)
 stage_1.enable_xformers_memory_efficient_attention()  # remove line if torch.__version__ >= 2.0.0
 stage_1.enable_model_cpu_offload()
 ```
@@ -103,10 +103,12 @@ from deepfloyd_if.modules import IFStageI, IFStageII, StableStageIII
 from deepfloyd_if.modules.t5 import T5Embedder
 
 cache_dir = "path/to/cache_dir"
-device = 'cuda:0'
-if_I = IFStageI('IF-I-XL-v1.0', device=device, cache_dir=cache_dir)
-if_II = IFStageII('IF-II-L-v1.0', device=device, cache_dir=cache_dir)
-if_III = StableStageIII('stable-diffusion-x4-upscaler', device=device, cache_dir=cache_dir)
+device = "cuda:0"
+if_I = IFStageI("IF-I-XL-v1.0", device=device, cache_dir=cache_dir)
+if_II = IFStageII("IF-II-L-v1.0", device=device, cache_dir=cache_dir)
+if_III = StableStageIII(
+    "stable-diffusion-x4-upscaler", device=device, cache_dir=cache_dir
+)
 t5 = T5Embedder(device="cpu", cache_dir=cache_dir)
 ```
 

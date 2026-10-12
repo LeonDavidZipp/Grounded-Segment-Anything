@@ -1,6 +1,10 @@
-from groundingdino.util.inference import load_model, load_image, predict, annotate, Model
 import cv2
-
+from groundingdino.util.inference import (
+    annotate,
+    load_image,
+    load_model,
+    predict,
+)
 
 CONFIG_PATH = "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
 CHECKPOINT_PATH = "./groundingdino_swint_ogc.pth"
@@ -27,5 +31,7 @@ boxes, logits, phrases = predict(
     device=DEVICE,
 )
 
-annotated_frame = annotate(image_source=image_source, boxes=boxes, logits=logits, phrases=phrases)
+annotated_frame = annotate(
+    image_source=image_source, boxes=boxes, logits=logits, phrases=phrases
+)
 cv2.imwrite("annotated_image.jpg", annotated_frame)

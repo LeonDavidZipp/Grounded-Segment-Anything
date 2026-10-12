@@ -7,12 +7,11 @@
 
 
 import os
-import urllib
 from functools import partial
 from types import SimpleNamespace
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from models.helpers import (
     EinOpsRearrange,
@@ -31,9 +30,7 @@ from models.multimodal_preprocessors import (
     TextPreprocessor,
     ThermalPreprocessor,
 )
-
 from models.transformer import MultiheadAttention, SimpleTransformer
-
 
 ModalityType = SimpleNamespace(
     VISION="vision",

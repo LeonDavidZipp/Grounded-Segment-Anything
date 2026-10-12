@@ -13,11 +13,11 @@ class _ColorfulFormatter(logging.Formatter):
         self._abbrev_name = kwargs.pop("abbrev_name", "")
         if len(self._abbrev_name):
             self._abbrev_name = self._abbrev_name + "."
-        super(_ColorfulFormatter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def formatMessage(self, record):
         record.name = record.name.replace(self._root_name, self._abbrev_name)
-        log = super(_ColorfulFormatter, self).formatMessage(record)
+        log = super().formatMessage(record)
         if record.levelno == logging.WARNING:
             prefix = colored("WARNING", "red", attrs=["blink"])
         elif record.levelno == logging.ERROR or record.levelno == logging.CRITICAL:
@@ -28,8 +28,10 @@ class _ColorfulFormatter(logging.Formatter):
 
 
 # so that calling setup_logger multiple times won't add many handlers
-@functools.lru_cache()
-def setup_logger(output=None, distributed_rank=0, *, color=True, name="imagenet", abbrev_name=None):
+@functools.lru_cache
+def setup_logger(
+    output=None, distributed_rank=0, *, color=True, name="imagenet", abbrev_name=None
+):
     """
     Initialize the detectron2 logger and set its verbosity level to "INFO".
 
@@ -88,6 +90,6 @@ def setup_logger(output=None, distributed_rank=0, *, color=True, name="imagenet"
 
 # cache the opened file object, so that different calls to `setup_logger`
 # with the same file name can safely write to the same file.
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _cached_log_stream(filename):
     return open(filename, "a")

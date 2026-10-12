@@ -3,12 +3,12 @@
 # ==========================================================
 import ast
 import os.path as osp
+import platform
 import shutil
 import sys
 import tempfile
 from argparse import Action
 from importlib import import_module
-import platform
 
 from addict import Dict
 from yapf.yapflib.yapf_api import FormatCode
@@ -29,9 +29,11 @@ class ConfigDict(Dict):
 
     def __getattr__(self, name):
         try:
-            value = super(ConfigDict, self).__getattr__(name)
+            value = super().__getattr__(name)
         except KeyError:
-            ex = AttributeError(f"'{self.__class__.__name__}' object has no " f"attribute '{name}'")
+            ex = AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{name}'"
+            )
         except Exception as e:
             ex = e
         else:
@@ -39,7 +41,7 @@ class ConfigDict(Dict):
         raise ex
 
 
-class SLConfig(object):
+class SLConfig:
     """
     config files.
     only support .py file as config now.
@@ -71,7 +73,7 @@ class SLConfig(object):
         try:
             ast.parse(content)
         except SyntaxError:
-            raise SyntaxError("There are syntax errors in config " f"file {filename}")
+            raise SyntaxError(f"There are syntax errors in config file {filename}")
 
     @staticmethod
     def _file2dict(filename):
@@ -79,9 +81,11 @@ class SLConfig(object):
         check_file_exist(filename)
         if filename.lower().endswith(".py"):
             with tempfile.TemporaryDirectory() as temp_config_dir:
-                temp_config_file = tempfile.NamedTemporaryFile(dir=temp_config_dir, suffix=".py")
+                temp_config_file = tempfile.NamedTemporaryFile(
+                    dir=temp_config_dir, suffix=".py"
+                )
                 temp_config_name = osp.basename(temp_config_file.name)
-                if platform.system() == 'Windows':
+                if platform.system() == "Windows":
                     temp_config_file.close()
                 shutil.copyfile(filename, osp.join(temp_config_dir, temp_config_name))
                 temp_module_name = osp.splitext(temp_config_name)[0]
@@ -90,7 +94,9 @@ class SLConfig(object):
                 mod = import_module(temp_module_name)
                 sys.path.pop(0)
                 cfg_dict = {
-                    name: value for name, value in mod.__dict__.items() if not name.startswith("__")
+                    name: value
+                    for name, value in mod.__dict__.items()
+                    if not name.startswith("__")
                 }
                 # delete imported module
                 del sys.modules[temp_module_name]
@@ -101,7 +107,7 @@ class SLConfig(object):
 
             cfg_dict = slload(filename)
         else:
-            raise IOError("Only py/yml/yaml/json type are supported now!")
+            raise OSError("Only py/yml/yaml/json type are supported now!")
 
         cfg_text = filename + "\n"
         with open(filename, "r") as f:
@@ -111,7 +117,9 @@ class SLConfig(object):
         if BASE_KEY in cfg_dict:
             cfg_dir = osp.dirname(filename)
             base_filename = cfg_dict.pop(BASE_KEY)
-            base_filename = base_filename if isinstance(base_filename, list) else [base_filename]
+            base_filename = (
+                base_filename if isinstance(base_filename, list) else [base_filename]
+            )
 
             cfg_dict_list = list()
             cfg_text_list = list()
@@ -156,7 +164,6 @@ class SLConfig(object):
         b = b.copy()
         for k, v in a.items():
             if isinstance(v, dict) and k in b and not v.pop(DELETE_KEY, False):
-
                 if not isinstance(b[k], dict) and not isinstance(b[k], list):
                     # if :
                     # import ipdb; ipdb.set_trace()
@@ -172,7 +179,8 @@ class SLConfig(object):
                     _ = int(k)
                 except:
                     raise TypeError(
-                        f"b is a list, " f"index {k} should be an int when input but {type(k)}"
+                        f"b is a list, "
+                        f"index {k} should be an int when input but {type(k)}"
                     )
                 b[int(k)] = SLConfig._merge_a_into_b(v, b[int(k)])
             else:
@@ -189,13 +197,13 @@ class SLConfig(object):
         if cfg_dict is None:
             cfg_dict = dict()
         elif not isinstance(cfg_dict, dict):
-            raise TypeError("cfg_dict must be a dict, but " f"got {type(cfg_dict)}")
+            raise TypeError(f"cfg_dict must be a dict, but got {type(cfg_dict)}")
         for key in cfg_dict:
             if key in RESERVED_KEYS:
                 raise KeyError(f"{key} is reserved for config file")
 
-        super(SLConfig, self).__setattr__("_cfg_dict", ConfigDict(cfg_dict))
-        super(SLConfig, self).__setattr__("_filename", filename)
+        super().__setattr__("_cfg_dict", ConfigDict(cfg_dict))
+        super().__setattr__("_filename", filename)
         if cfg_text:
             text = cfg_text
         elif filename:
@@ -203,7 +211,7 @@ class SLConfig(object):
                 text = f.read()
         else:
             text = ""
-        super(SLConfig, self).__setattr__("_text", text)
+        super().__setattr__("_text", text)
 
     @property
     def filename(self):
@@ -238,7 +246,7 @@ class SLConfig(object):
                 k_str = f"'{k}'" if isinstance(k, str) else str(k)
                 attr_str = f"{k_str}: {v_str}"
             else:
-                attr_str = f"{str(k)}={v_str}"
+                attr_str = f"{k!s}={v_str}"
             attr_str = _indent(attr_str, indent)
 
             return attr_str
@@ -254,7 +262,7 @@ class SLConfig(object):
                     k_str = f"'{k}'" if isinstance(k, str) else str(k)
                     attr_str = f"{k_str}: {v_str}"
                 else:
-                    attr_str = f"{str(k)}={v_str}"
+                    attr_str = f"{k!s}={v_str}"
                 attr_str = _indent(attr_str, indent) + "]"
             else:
                 attr_str = _format_basic_types(k, v, use_mapping)
@@ -282,7 +290,7 @@ class SLConfig(object):
                         k_str = f"'{k}'" if isinstance(k, str) else str(k)
                         attr_str = f"{k_str}: dict({v_str}"
                     else:
-                        attr_str = f"{str(k)}=dict({v_str}"
+                        attr_str = f"{k!s}=dict({v_str}"
                     attr_str = _indent(attr_str, indent) + ")" + end
                 elif isinstance(v, list):
                     attr_str = _format_list(k, v, use_mapping) + end
@@ -377,8 +385,8 @@ class SLConfig(object):
             subkey = key_list[-1]
             d[subkey] = v
 
-        cfg_dict = super(SLConfig, self).__getattribute__("_cfg_dict")
-        super(SLConfig, self).__setattr__(
+        cfg_dict = super().__getattribute__("_cfg_dict")
+        super().__setattr__(
             "_cfg_dict", SLConfig._merge_a_into_b(option_cfg_dict, cfg_dict)
         )
 

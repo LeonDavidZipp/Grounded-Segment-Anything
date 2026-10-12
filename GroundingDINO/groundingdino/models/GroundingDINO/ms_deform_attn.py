@@ -16,11 +16,10 @@
 
 import math
 import warnings
-from typing import Optional
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.init import constant_, xavier_uniform_
@@ -34,7 +33,7 @@ except:
 # helpers
 def _is_power_of_2(n):
     if (not isinstance(n, int)) or (n < 0):
-        raise ValueError("invalid input for _is_power_of_2: {} (type: {})".format(n, type(n)))
+        raise ValueError(f"invalid input for _is_power_of_2: {n} (type: {type(n)})")
     return (n & (n - 1) == 0) and n != 0
 
 
@@ -108,7 +107,10 @@ def multi_scale_deformable_attn_pytorch(
         # bs, num_heads*embed_dims, H_*W_ ->
         # bs*num_heads, embed_dims, H_, W_
         value_l_ = (
-            value_list[level].flatten(2).transpose(1, 2).reshape(bs * num_heads, embed_dims, H_, W_)
+            value_list[level]
+            .flatten(2)
+            .transpose(1, 2)
+            .reshape(bs * num_heads, embed_dims, H_, W_)
         )
         # bs, num_queries, num_heads, num_points, 2 ->
         # bs, num_heads, num_queries, num_points, 2 ->
@@ -116,7 +118,11 @@ def multi_scale_deformable_attn_pytorch(
         sampling_grid_l_ = sampling_grids[:, :, :, level].transpose(1, 2).flatten(0, 1)
         # bs*num_heads, embed_dims, num_queries, num_points
         sampling_value_l_ = F.grid_sample(
-            value_l_, sampling_grid_l_, mode="bilinear", padding_mode="zeros", align_corners=False
+            value_l_,
+            sampling_grid_l_,
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=False,
         )
         sampling_value_list.append(sampling_value_l_)
     # (bs, num_queries, num_heads, num_levels, num_points) ->
@@ -163,9 +169,7 @@ class MultiScaleDeformableAttention(nn.Module):
         super().__init__()
         if embed_dim % num_heads != 0:
             raise ValueError(
-                "embed_dim must be divisible by num_heads, but got {} and {}".format(
-                    embed_dim, num_heads
-                )
+                f"embed_dim must be divisible by num_heads, but got {embed_dim} and {num_heads}"
             )
         head_dim = embed_dim // num_heads
 
@@ -184,8 +188,12 @@ class MultiScaleDeformableAttention(nn.Module):
         self.num_heads = num_heads
         self.num_levels = num_levels
         self.num_points = num_points
-        self.sampling_offsets = nn.Linear(embed_dim, num_heads * num_levels * num_points * 2)
-        self.attention_weights = nn.Linear(embed_dim, num_heads * num_levels * num_points)
+        self.sampling_offsets = nn.Linear(
+            embed_dim, num_heads * num_levels * num_points * 2
+        )
+        self.attention_weights = nn.Linear(
+            embed_dim, num_heads * num_levels * num_points
+        )
         self.value_proj = nn.Linear(embed_dim, embed_dim)
         self.output_proj = nn.Linear(embed_dim, embed_dim)
 
@@ -232,16 +240,15 @@ class MultiScaleDeformableAttention(nn.Module):
     def forward(
         self,
         query: torch.Tensor,
-        key: Optional[torch.Tensor] = None,
-        value: Optional[torch.Tensor] = None,
-        query_pos: Optional[torch.Tensor] = None,
-        key_padding_mask: Optional[torch.Tensor] = None,
-        reference_points: Optional[torch.Tensor] = None,
-        spatial_shapes: Optional[torch.Tensor] = None,
-        level_start_index: Optional[torch.Tensor] = None,
-        **kwargs
+        key: torch.Tensor | None = None,
+        value: torch.Tensor | None = None,
+        query_pos: torch.Tensor | None = None,
+        key_padding_mask: torch.Tensor | None = None,
+        reference_points: torch.Tensor | None = None,
+        spatial_shapes: torch.Tensor | None = None,
+        level_start_index: torch.Tensor | None = None,
+        **kwargs,
     ) -> torch.Tensor:
-
         """Forward Function of MultiScaleDeformableAttention
 
         Args:
@@ -307,7 +314,9 @@ class MultiScaleDeformableAttention(nn.Module):
 
         # bs, num_query, num_heads, num_levels, num_points, 2
         if reference_points.shape[-1] == 2:
-            offset_normalizer = torch.stack([spatial_shapes[..., 1], spatial_shapes[..., 0]], -1)
+            offset_normalizer = torch.stack(
+                [spatial_shapes[..., 1], spatial_shapes[..., 0]], -1
+            )
             sampling_locations = (
                 reference_points[:, :, None, :, None, :]
                 + sampling_offsets / offset_normalizer[None, None, None, :, None, :]
@@ -322,11 +331,9 @@ class MultiScaleDeformableAttention(nn.Module):
             )
         else:
             raise ValueError(
-                "Last dim of reference_points must be 2 or 4, but get {} instead.".format(
-                    reference_points.shape[-1]
-                )
+                f"Last dim of reference_points must be 2 or 4, but get {reference_points.shape[-1]} instead."
             )
-    
+
         if torch.cuda.is_available() and value.is_cuda:
             halffloat = False
             if value.dtype == torch.float16:
@@ -371,7 +378,7 @@ def create_dummy_class(klass, dependency, message=""):
     Returns:
         class: a class object
     """
-    err = "Cannot import '{}', therefore '{}' is not available.".format(dependency, klass)
+    err = f"Cannot import '{dependency}', therefore '{klass}' is not available."
     if message:
         err = err + " " + message
 
@@ -380,7 +387,7 @@ def create_dummy_class(klass, dependency, message=""):
         def __getattr__(_, __):  # noqa: B902
             raise ImportError(err)
 
-    class _Dummy(object, metaclass=_DummyMetaClass):
+    class _Dummy(metaclass=_DummyMetaClass):
         # throw error on constructor
         def __init__(self, *args, **kwargs):
             raise ImportError(err)
@@ -400,7 +407,7 @@ def create_dummy_func(func, dependency, message=""):
     Returns:
         function: a function object
     """
-    err = "Cannot import '{}', therefore '{}' is not available.".format(dependency, func)
+    err = f"Cannot import '{dependency}', therefore '{func}' is not available."
     if message:
         err = err + " " + message
 

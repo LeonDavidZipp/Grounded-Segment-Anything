@@ -1,10 +1,15 @@
 import argparse
+
 import cv2
-from ultralytics import YOLO
 from FastSAM.tools import *
-from groundingdino.util.inference import load_model, load_image, predict, annotate, Model
+from groundingdino.util.inference import (
+    load_image,
+    load_model,
+    predict,
+)
 from torchvision.ops import box_convert
-import ast
+from ultralytics import YOLO
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -15,7 +20,10 @@ def parse_args():
         "--img_path", type=str, default="./images/dogs.jpg", help="path to image file"
     )
     parser.add_argument(
-        "--text", type=str, default="the black dog.", help="text prompt for GroundingDINO"
+        "--text",
+        type=str,
+        default="the black dog.",
+        help="text prompt for GroundingDINO",
     )
     parser.add_argument("--imgsz", type=int, default=1024, help="image size")
     parser.add_argument(
@@ -91,9 +99,10 @@ def main(args):
         max_det=100,
     )
 
-
     # Build GroundingDINO Model
-    groundingdino_config = "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+    groundingdino_config = (
+        "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+    )
     groundingdino_ckpt_path = "./groundingdino_swint_ogc.pth"
 
     image_source, image = load_image(img_path)
@@ -108,7 +117,6 @@ def main(args):
         device=args.device,
     )
 
-
     # Grounded-Fast-SAM
 
     ori_img = cv2.imread(img_path)
@@ -118,7 +126,9 @@ def main(args):
     # Save each frame due to the post process from FastSAM
     boxes = boxes * torch.Tensor([ori_w, ori_h, ori_w, ori_h])
     print(f"Detected Boxes: {len(boxes)}")
-    boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").cpu().numpy().tolist()
+    boxes = (
+        box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").cpu().numpy().tolist()
+    )
     for box_idx in range(len(boxes)):
         mask, _ = box_prompt(
             results[0].masks.data,
@@ -133,7 +143,12 @@ def main(args):
             mask_random_color=True,
             bbox=boxes[box_idx],
         )
-        cv2.imwrite(os.path.join(save_path, basename + f"_{str(box_idx)}_caption_{phrases[box_idx]}.jpg"), cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(
+            os.path.join(
+                save_path, basename + f"_{box_idx!s}_caption_{phrases[box_idx]}.jpg"
+            ),
+            cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR),
+        )
 
 
 if __name__ == "__main__":

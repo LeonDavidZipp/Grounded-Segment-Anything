@@ -4,6 +4,7 @@
 # when running in Docker
 # Check if nvcc is installed
 NVCC := $(shell which nvcc)
+PLATFORM ?= linux/amd64
 ifeq ($(NVCC),)
 	# NVCC not found
 	USE_CUDA := 0
@@ -25,7 +26,9 @@ endif
 
 build-image:
 	@echo $(BUILD_MESSAGE)
-	docker build --build-arg USE_CUDA=$(USE_CUDA) \
+	docker build \
+	--platform ${PLATFORM} \
+	--build-arg USE_CUDA=$(USE_CUDA) \
 	--build-arg TORCH_ARCH=$(TORCH_CUDA_ARCH_LIST) \
 	-t gsa:v0 .
 run:
@@ -35,7 +38,8 @@ endif
 ifeq (,$(wildcard ./groundingdino_swint_ogc.pth))
 	wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth
 endif
-	docker run --gpus all -it --rm --net=host --privileged \
+	docker run \
+	-it --rm --net=host --privileged --platform ${PLATFORM} \
 	-v /tmp/.X11-unix:/tmp/.X11-unix \
 	-v "${PWD}":/home/appuser/Grounded-Segment-Anything \
 	-e DISPLAY=$DISPLAY \

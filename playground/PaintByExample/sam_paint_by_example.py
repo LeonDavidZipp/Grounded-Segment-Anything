@@ -1,18 +1,19 @@
 # !pip install diffusers transformers
 
+from io import BytesIO
+
+import numpy as np
 import requests
 import torch
-import numpy as np
-from PIL import Image
-from io import BytesIO
 from diffusers import DiffusionPipeline
-
-from segment_anything import sam_model_registry, SamPredictor
-
+from PIL import Image
+from segment_anything import SamPredictor, sam_model_registry
 
 """
 Step 1: Download and preprocess example demo images
 """
+
+
 def download_image(url):
     response = requests.get(url)
     return Image.open(BytesIO(response.content)).convert("RGB")
@@ -35,8 +36,12 @@ DEVICE = "cuda:1"
 
 # SAM
 SAM_ENCODER_VERSION = "vit_h"
-SAM_CHECKPOINT_PATH = "/comp_robot/rentianhe/code/Grounded-Segment-Anything/sam_vit_h_4b8939.pth"
-sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH).to(device=DEVICE)
+SAM_CHECKPOINT_PATH = (
+    "/comp_robot/rentianhe/code/Grounded-Segment-Anything/sam_vit_h_4b8939.pth"
+)
+sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH).to(
+    device=DEVICE
+)
 sam_predictor = SamPredictor(sam)
 sam_predictor.set_image(np.array(init_image))
 
@@ -58,9 +63,7 @@ input_point = np.array([[350, 256]])
 input_label = np.array([1])  # positive label
 
 masks, _, _ = sam_predictor.predict(
-    point_coords=input_point,
-    point_labels=input_label,
-    multimask_output=False
+    point_coords=input_point, point_labels=input_label, multimask_output=False
 )
 mask = masks[0]  # [1, 512, 512] to [512, 512] np.ndarray
 mask_pil = Image.fromarray(mask)
@@ -68,11 +71,11 @@ mask_pil = Image.fromarray(mask)
 mask_pil.save("./mask.jpg")
 
 image = pipe(
-    image=init_image, 
-    mask_image=mask_pil, 
-    example_image=example_image, 
-    num_inference_steps=500, 
-    guidance_scale=9.0
+    image=init_image,
+    mask_image=mask_pil,
+    example_image=example_image,
+    num_inference_steps=500,
+    guidance_scale=9.0,
 ).images[0]
 
 image.save("./paint_by_example_demo.jpg")

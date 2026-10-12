@@ -3,7 +3,7 @@ import json
 import warnings
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import torch
@@ -40,7 +40,9 @@ def renorm(
 ) -> torch.FloatTensor:
     # img: tensor(3,H,W) or tensor(B,3,H,W)
     # return: same as img
-    assert img.dim() == 3 or img.dim() == 4, "img.dim() should be 3 or 4 but %d" % img.dim()
+    assert img.dim() == 3 or img.dim() == 4, (
+        "img.dim() should be 3 or 4 but %d" % img.dim()
+    )
     if img.dim() == 3:
         assert img.size(0) == 3, 'img.size(0) shoule be 3 but "%d". (%s)' % (
             img.size(0),
@@ -147,8 +149,12 @@ class CocoClassMapper:
             "89": 79,
             "90": 80,
         }
-        self.origin2compact_mapper = {int(k): v - 1 for k, v in self.category_map_str.items()}
-        self.compact2origin_mapper = {int(v - 1): int(k) for k, v in self.category_map_str.items()}
+        self.origin2compact_mapper = {
+            int(k): v - 1 for k, v in self.category_map_str.items()
+        }
+        self.compact2origin_mapper = {
+            int(v - 1): int(k) for k, v in self.category_map_str.items()
+        }
 
     def origin2compact(self, idx):
         return self.origin2compact_mapper[int(idx)]
@@ -166,11 +172,10 @@ def to_device(item, device):
         return {k: to_device(v, device) for k, v in item.items()}
     else:
         raise NotImplementedError(
-            "Call Shilong if you use other containers! type: {}".format(type(item))
+            f"Call Shilong if you use other containers! type: {type(item)}"
         )
 
 
-#
 def get_gaussian_mean(x, axis, other_axis, softmax=True):
     """
 
@@ -253,7 +258,7 @@ class Embedder:
 
 
 def get_embedder(multires, i=0):
-    import torch.nn as nn
+    from torch import nn
 
     if i == -1:
         return nn.Identity(), 3
@@ -319,7 +324,7 @@ def get_raw_dict(args):
     elif isinstance(args, SLConfig):
         return args._cfg_dict
     else:
-        raise NotImplementedError("Unknown type {}".format(type(args)))
+        raise NotImplementedError(f"Unknown type {type(args)}")
 
 
 def stat_tensors(tensor):
@@ -379,7 +384,9 @@ class NiceRepr:
             return str(len(self))
         else:
             # In all other cases force the subclass to overload __nice__
-            raise NotImplementedError(f"Define the __nice__ method for {self.__class__!r}")
+            raise NotImplementedError(
+                f"Define the __nice__ method for {self.__class__!r}"
+            )
 
     def __repr__(self):
         """str: the string of the module"""
@@ -472,7 +479,7 @@ def random_boxes(num=1, scale=1, rng=None):
 
 class ModelEma(torch.nn.Module):
     def __init__(self, model, decay=0.9997, device=None):
-        super(ModelEma, self).__init__()
+        super().__init__()
         # make a copy of the model for accumulating moving average of weights
         self.module = deepcopy(model)
         self.module.eval()
@@ -494,7 +501,9 @@ class ModelEma(torch.nn.Module):
                 ema_v.copy_(update_fn(ema_v, model_v))
 
     def update(self, model):
-        self._update(model, update_fn=lambda e, m: self.decay * e + (1.0 - self.decay) * m)
+        self._update(
+            model, update_fn=lambda e, m: self.decay * e + (1.0 - self.decay) * m
+        )
 
     def set(self, model):
         self._update(model, update_fn=lambda e, m: m)
@@ -523,7 +532,7 @@ class BestMetricSingle:
         return False
 
     def __str__(self) -> str:
-        return "best_res: {}\t best_ep: {}".format(self.best_res, self.best_ep)
+        return f"best_res: {self.best_res}\t best_ep: {self.best_ep}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -574,7 +583,7 @@ class BestMetricHolder:
         return self.__repr__()
 
 
-def targets_to(targets: List[Dict[str, Any]], device):
+def targets_to(targets: list[dict[str, Any]], device):
     """Moves the target dicts to the given device."""
     excluded_keys = [
         "questionId",
@@ -592,12 +601,13 @@ def targets_to(targets: List[Dict[str, Any]], device):
         "dataset_type",
     ]
     return [
-        {k: v.to(device) if k not in excluded_keys else v for k, v in t.items()} for t in targets
+        {k: v.to(device) if k not in excluded_keys else v for k, v in t.items()}
+        for t in targets
     ]
 
 
 def get_phrases_from_posmap(
-    posmap: torch.BoolTensor, tokenized: Dict, tokenizer: AutoTokenizer
+    posmap: torch.BoolTensor, tokenized: dict, tokenizer: AutoTokenizer
 ):
     assert isinstance(posmap, torch.Tensor), "posmap must be torch.Tensor"
     if posmap.dim() == 1:

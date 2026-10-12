@@ -11,17 +11,13 @@
 # and https://github.com/facebookresearch/vissl/blob/main/vissl/models/trunks/vision_transformer.py
 
 
-import copy
-import fnmatch
-import logging
+from collections.abc import Callable
 from functools import partial
-from typing import Callable, List
 
 import torch
-import torch.nn as nn
-import torch.utils.checkpoint as checkpoint
-
 from timm.models.layers import DropPath, trunc_normal_
+from torch import nn
+from torch.utils import checkpoint
 
 
 class Attention(nn.Module):
@@ -121,9 +117,9 @@ class BlockWithMasking(nn.Module):
     ):
         super().__init__()
 
-        assert not isinstance(
-            attn_target, nn.Module
-        ), "attn_target should be a Callable. Otherwise attn_target is shared across blocks!"
+        assert not isinstance(attn_target, nn.Module), (
+            "attn_target should be a Callable. Otherwise attn_target is shared across blocks!"
+        )
         self.attn = attn_target()
         if drop_path > 0.0:
             self.drop_path = DropPath(drop_path)
@@ -252,7 +248,7 @@ class SimpleTransformer(nn.Module):
         attn_mask: torch.Tensor = None,
         use_checkpoint: bool = False,
         checkpoint_every_n: int = 1,
-        checkpoint_blk_ids: List[int] = None,
+        checkpoint_blk_ids: list[int] = None,
     ):
         """
         Inputs

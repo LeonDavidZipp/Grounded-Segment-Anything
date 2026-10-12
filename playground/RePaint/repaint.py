@@ -1,9 +1,8 @@
 from io import BytesIO
 
-import torch
-
 import PIL
 import requests
+import torch
 from diffusers import RePaintPipeline, RePaintScheduler
 
 
@@ -22,8 +21,12 @@ mask_image = download_image(mask_url).resize((256, 256))
 # Load the RePaint scheduler and pipeline based on a pretrained DDPM model
 DEVICE = "cuda:1"
 CACHE_DIR = "/comp_robot/rentianhe/weights/diffusers/"
-scheduler = RePaintScheduler.from_pretrained("google/ddpm-ema-celebahq-256", cache_dir=CACHE_DIR)
-pipe = RePaintPipeline.from_pretrained("google/ddpm-ema-celebahq-256", scheduler=scheduler, cache_dir=CACHE_DIR)
+scheduler = RePaintScheduler.from_pretrained(
+    "google/ddpm-ema-celebahq-256", cache_dir=CACHE_DIR
+)
+pipe = RePaintPipeline.from_pretrained(
+    "google/ddpm-ema-celebahq-256", scheduler=scheduler, cache_dir=CACHE_DIR
+)
 pipe = pipe.to(DEVICE)
 
 generator = torch.Generator(device=DEVICE).manual_seed(0)

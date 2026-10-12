@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 @File    :   visualizer.py
 @Time    :   2022/04/05 11:39:33
-@Author  :   Shilong Liu 
+@Author  :   Shilong Liu
 @Contact :   slongliu86@gmail.com
 """
 
 import datetime
 import os
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -24,7 +22,9 @@ def renorm(
 ) -> torch.FloatTensor:
     # img: tensor(3,H,W) or tensor(B,3,H,W)
     # return: same as img
-    assert img.dim() == 3 or img.dim() == 4, "img.dim() should be 3 or 4 but %d" % img.dim()
+    assert img.dim() == 3 or img.dim() == 4, (
+        "img.dim() should be 3 or 4 but %d" % img.dim()
+    )
     if img.dim() == 3:
         assert img.size(0) == 3, 'img.size(0) shoule be 3 but "%d". (%s)' % (
             img.size(0),
@@ -112,9 +112,7 @@ class COCOVisualizer:
 
         self.addtgt(tgt)
 
-        if tgt is None:
-            image_id = 0
-        elif "image_id" not in tgt:
+        if tgt is None or "image_id" not in tgt:
             image_id = 0
         else:
             image_id = tgt["image_id"]
@@ -125,9 +123,12 @@ class COCOVisualizer:
             )
         else:
             savename = "{}/{}-{}-{}.png".format(
-                savedir, caption, int(image_id), str(datetime.datetime.now()).replace(" ", "-")
+                savedir,
+                caption,
+                int(image_id),
+                str(datetime.datetime.now()).replace(" ", "-"),
             )
-        print("savename: {}".format(savename))
+        print(f"savename: {savename}")
         os.makedirs(os.path.dirname(savename), exist_ok=True)
         plt.savefig(savename)
         plt.close()
@@ -172,9 +173,9 @@ class COCOVisualizer:
         ax.add_collection(p)
 
         if "strings_positive" in tgt and len(tgt["strings_positive"]) > 0:
-            assert (
-                len(tgt["strings_positive"]) == numbox
-            ), f"{len(tgt['strings_positive'])} = {numbox}, "
+            assert len(tgt["strings_positive"]) == numbox, (
+                f"{len(tgt['strings_positive'])} = {numbox}, "
+            )
             for idx, strlist in enumerate(tgt["strings_positive"]):
                 cate_id = int(tgt["labels"][idx])
                 _string = str(cate_id) + ":" + " ".join(strlist)
@@ -189,7 +190,9 @@ class COCOVisualizer:
                 )
 
         if "box_label" in tgt:
-            assert len(tgt["box_label"]) == numbox, f"{len(tgt['box_label'])} = {numbox}, "
+            assert len(tgt["box_label"]) == numbox, (
+                f"{len(tgt['box_label'])} = {numbox}, "
+            )
             for idx, bl in enumerate(tgt["box_label"]):
                 _string = str(bl)
                 bbox_x, bbox_y, bbox_w, bbox_h = boxes[idx]
@@ -215,7 +218,9 @@ class COCOVisualizer:
                 tgt["attn"] = [tgt["attn"]]
             for item in tgt["attn"]:
                 attn_map, basergb = item
-                attn_map = (attn_map - attn_map.min()) / (attn_map.max() - attn_map.min() + 1e-3)
+                attn_map = (attn_map - attn_map.min()) / (
+                    attn_map.max() - attn_map.min() + 1e-3
+                )
                 attn_map = (attn_map * 255).astype(np.uint8)
                 cm = ColorMap(basergb)
                 heatmap = cm(attn_map)
@@ -311,7 +316,9 @@ class COCOVisualizer:
 
             # p = PatchCollection(polygons, facecolor=color, linewidths=0, alpha=0.4)
             # ax.add_collection(p)
-            p = PatchCollection(polygons, facecolor="none", edgecolors=color, linewidths=2)
+            p = PatchCollection(
+                polygons, facecolor="none", edgecolors=color, linewidths=2
+            )
             ax.add_collection(p)
         elif datasetType == "captions":
             for ann in anns:

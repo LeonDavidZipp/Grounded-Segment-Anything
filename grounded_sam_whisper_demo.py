@@ -1,28 +1,28 @@
 import argparse
-import os
-import copy
-
-import numpy as np
 import json
-import torch
-import torchvision
-from PIL import Image, ImageDraw, ImageFont
+import os
+
+import cv2
 
 # Grounding DINO
 import GroundingDINO.groundingdino.datasets.transforms as T
-from GroundingDINO.groundingdino.models import build_model
-from GroundingDINO.groundingdino.util import box_ops
-from GroundingDINO.groundingdino.util.slconfig import SLConfig
-from GroundingDINO.groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
-
-# segment anything
-from segment_anything import build_sam, SamPredictor 
-import cv2
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torchvision
 
 # whisper
 import whisper
+from GroundingDINO.groundingdino.models import build_model
+from GroundingDINO.groundingdino.util.slconfig import SLConfig
+from GroundingDINO.groundingdino.util.utils import (
+    clean_state_dict,
+    get_phrases_from_posmap,
+)
+from PIL import Image
+
+# segment anything
+from segment_anything import SamPredictor, build_sam
 
 
 def load_image(image_path):
@@ -45,13 +45,17 @@ def load_model(model_config_path, model_checkpoint_path, device):
     args.device = device
     model = build_model(args)
     checkpoint = torch.load(model_checkpoint_path, map_location="cpu")
-    load_res = model.load_state_dict(clean_state_dict(checkpoint["model"]), strict=False)
+    load_res = model.load_state_dict(
+        clean_state_dict(checkpoint["model"]), strict=False
+    )
     print(load_res)
     _ = model.eval()
     return model
 
 
-def get_grounding_output(model, image, caption, box_threshold, text_threshold,device="cpu"):
+def get_grounding_output(
+    model, image, caption, box_threshold, text_threshold, device="cpu"
+):
     caption = caption.lower()
     caption = caption.strip()
     if not caption.endswith("."):
@@ -79,17 +83,20 @@ def get_grounding_output(model, image, caption, box_threshold, text_threshold,de
     pred_phrases = []
     scores = []
     for logit, box in zip(logits_filt, boxes_filt):
-        pred_phrase = get_phrases_from_posmap(logit > text_threshold, tokenized, tokenlizer)
+        pred_phrase = get_phrases_from_posmap(
+            logit > text_threshold, tokenized, tokenlizer
+        )
         pred_phrases.append(pred_phrase + f"({str(logit.max().item())[:4]})")
         scores.append(logit.max().item())
 
     return boxes_filt, torch.Tensor(scores), pred_phrases
 
+
 def show_mask(mask, ax, random_color=False):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
     else:
-        color = np.array([30/255, 144/255, 255/255, 0.6])
+        color = np.array([30 / 255, 144 / 255, 255 / 255, 0.6])
     h, w = mask.shape[-2:]
     mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
     ax.imshow(mask_image)
@@ -98,7 +105,9 @@ def show_mask(mask, ax, random_color=False):
 def show_box(box, ax, label):
     x0, y0 = box[0], box[1]
     w, h = box[2] - box[0], box[3] - box[1]
-    ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2)) 
+    ax.add_patch(
+        plt.Rectangle((x0, y0), w, h, edgecolor="green", facecolor=(0, 0, 0, 0), lw=2)
+    )
     ax.text(x0, y0, label)
 
 
@@ -110,26 +119,30 @@ def save_mask_data(output_dir, mask_list, box_list, label_list):
         mask_img[mask.cpu().numpy()[0] == True] = value + idx + 1
     plt.figure(figsize=(10, 10))
     plt.imshow(mask_img.numpy())
-    plt.axis('off')
-    plt.savefig(os.path.join(output_dir, 'mask.jpg'), bbox_inches="tight", dpi=300, pad_inches=0.0)
+    plt.axis("off")
+    plt.savefig(
+        os.path.join(output_dir, "mask.jpg"),
+        bbox_inches="tight",
+        dpi=300,
+        pad_inches=0.0,
+    )
 
-    json_data = [{
-        'value': value,
-        'label': 'background'
-    }]
+    json_data = [{"value": value, "label": "background"}]
     for label, box in zip(label_list, box_list):
         value += 1
-        name, logit = label.split('(')
-        logit = logit[:-1] # the last is ')'
-        json_data.append({
-            'value': value,
-            'label': name,
-            'logit': float(logit),
-            'box': box.numpy().tolist(),
-        })
-    with open(os.path.join(output_dir, 'mask.json'), 'w') as f:
+        name, logit = label.split("(")
+        logit = logit[:-1]  # the last is ')'
+        json_data.append(
+            {
+                "value": value,
+                "label": name,
+                "logit": float(logit),
+                "box": box.numpy().tolist(),
+            }
+        )
+    with open(os.path.join(output_dir, "mask.json"), "w") as f:
         json.dump(json_data, f)
-    
+
 
 def speech_recognition(speech_file, model):
     # whisper
@@ -152,8 +165,8 @@ def speech_recognition(speech_file, model):
     speech_text = result.text
     return speech_text, speech_language
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser("Grounded-Segment-Anything Demo", add_help=True)
     parser.add_argument("--config", type=str, required=True, help="path to config file")
     parser.add_argument(
@@ -162,17 +175,32 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sam_checkpoint", type=str, required=True, help="path to checkpoint file"
     )
-    parser.add_argument("--input_image", type=str, required=True, help="path to image file")
+    parser.add_argument(
+        "--input_image", type=str, required=True, help="path to image file"
+    )
     parser.add_argument("--speech_file", type=str, required=True, help="speech file")
     parser.add_argument(
-        "--output_dir", "-o", type=str, default="outputs", required=True, help="output directory"
+        "--output_dir",
+        "-o",
+        type=str,
+        default="outputs",
+        required=True,
+        help="output directory",
     )
 
-    parser.add_argument("--box_threshold", type=float, default=0.3, help="box threshold")
-    parser.add_argument("--text_threshold", type=float, default=0.25, help="text threshold")
-    parser.add_argument("--iou_threshold", type=float, default=0.5, help="iou threshold")
+    parser.add_argument(
+        "--box_threshold", type=float, default=0.3, help="box threshold"
+    )
+    parser.add_argument(
+        "--text_threshold", type=float, default=0.25, help="text threshold"
+    )
+    parser.add_argument(
+        "--iou_threshold", type=float, default=0.5, help="iou threshold"
+    )
 
-    parser.add_argument("--device", type=str, default="cpu", help="running on cpu only!, default=False")
+    parser.add_argument(
+        "--device", type=str, default="cpu", help="running on cpu only!, default=False"
+    )
     args = parser.parse_args()
 
     # cfg
@@ -231,15 +259,17 @@ if __name__ == "__main__":
     pred_phrases = [pred_phrases[idx] for idx in nms_idx]
     print(f"After NMS: {boxes_filt.shape[0]} boxes")
 
-    transformed_boxes = predictor.transform.apply_boxes_torch(boxes_filt, image.shape[:2]).to(device)
+    transformed_boxes = predictor.transform.apply_boxes_torch(
+        boxes_filt, image.shape[:2]
+    ).to(device)
 
     masks, _, _ = predictor.predict_torch(
-        point_coords = None,
-        point_labels = None,
-        boxes = transformed_boxes.to(args.device),
-        multimask_output = False,
+        point_coords=None,
+        point_labels=None,
+        boxes=transformed_boxes.to(args.device),
+        multimask_output=False,
     )
-    
+
     # draw output image
     plt.figure(figsize=(10, 10))
     plt.imshow(image)
@@ -247,14 +277,14 @@ if __name__ == "__main__":
         show_mask(mask.cpu().numpy(), plt.gca(), random_color=True)
     for box, label in zip(boxes_filt, pred_phrases):
         show_box(box.numpy(), plt.gca(), label)
-    
+
     plt.title(speech_text)
-    plt.axis('off')
+    plt.axis("off")
     plt.savefig(
-        os.path.join(output_dir, "grounded_sam_whisper_output.jpg"), 
-        bbox_inches="tight", dpi=300, pad_inches=0.0
+        os.path.join(output_dir, "grounded_sam_whisper_output.jpg"),
+        bbox_inches="tight",
+        dpi=300,
+        pad_inches=0.0,
     )
 
-
     save_mask_data(output_dir, masks, boxes_filt, pred_phrases)
-    

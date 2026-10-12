@@ -16,11 +16,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # ------------------------------------------------------------------------
 
-from typing import Optional
 
 import torch
-import torch.utils.checkpoint as checkpoint
 from torch import Tensor, nn
+from torch.utils import checkpoint
 
 from groundingdino.util.misc import inverse_sigmoid
 
@@ -82,7 +81,13 @@ class Transformer(nn.Module):
 
         # choose encoder layer type
         encoder_layer = DeformableTransformerEncoderLayer(
-            d_model, dim_feedforward, dropout, activation, num_feature_levels, nhead, enc_n_points
+            d_model,
+            dim_feedforward,
+            dropout,
+            activation,
+            num_feature_levels,
+            nhead,
+            enc_n_points,
         )
 
         if use_text_enhancer:
@@ -149,12 +154,14 @@ class Transformer(nn.Module):
         self.num_queries = num_queries  # useful for single stage model only
         self.num_patterns = num_patterns
         if not isinstance(num_patterns, int):
-            Warning("num_patterns should be int but {}".format(type(num_patterns)))
+            Warning(f"num_patterns should be int but {type(num_patterns)}")
             self.num_patterns = 0
 
         if num_feature_levels > 1:
             if self.num_encoder_layers > 0:
-                self.level_embed = nn.Parameter(torch.Tensor(num_feature_levels, d_model))
+                self.level_embed = nn.Parameter(
+                    torch.Tensor(num_feature_levels, d_model)
+                )
             else:
                 self.level_embed = None
 
@@ -169,8 +176,8 @@ class Transformer(nn.Module):
 
         # for two stage
         self.two_stage_type = two_stage_type
-        assert two_stage_type in ["no", "standard"], "unknown param {} of two_stage_type".format(
-            two_stage_type
+        assert two_stage_type in ["no", "standard"], (
+            f"unknown param {two_stage_type} of two_stage_type"
         )
         if two_stage_type == "standard":
             # anchor selection at the output of encoder
@@ -208,7 +215,16 @@ class Transformer(nn.Module):
     def init_ref_points(self, use_num_queries):
         self.refpoint_embed = nn.Embedding(use_num_queries, 4)
 
-    def forward(self, srcs, masks, refpoint_embed, pos_embeds, tgt, attn_mask=None, text_dict=None):
+    def forward(
+        self,
+        srcs,
+        masks,
+        refpoint_embed,
+        pos_embeds,
+        tgt,
+        attn_mask=None,
+        text_dict=None,
+    ):
         """
         Input:
             - srcs: List of multi features [bs, ci, hi, wi]
@@ -247,7 +263,9 @@ class Transformer(nn.Module):
         level_start_index = torch.cat(
             (spatial_shapes.new_zeros((1,)), spatial_shapes.prod(1).cumsum(0)[:-1])
         )
-        valid_ratios = torch.stack([self.get_valid_ratio(m) for m in masks], 1).to(src.dtype)
+        valid_ratios = torch.stack([self.get_valid_ratio(m) for m in masks], 1).to(
+            src.dtype
+        )
 
         # two stage
         enc_topk_proposals = enc_refpoint_embed = None
@@ -288,7 +306,9 @@ class Transformer(nn.Module):
             output_memory = self.enc_output_norm(self.enc_output(output_memory))
 
             if text_dict is not None:
-                enc_outputs_class_unselected = self.enc_out_class_embed(output_memory, text_dict)
+                enc_outputs_class_unselected = self.enc_out_class_embed(
+                    output_memory, text_dict
+                )
             else:
                 enc_outputs_class_unselected = self.enc_out_class_embed(output_memory)
 
@@ -302,7 +322,9 @@ class Transformer(nn.Module):
 
             # gather boxes
             refpoint_embed_undetach = torch.gather(
-                enc_outputs_coord_unselected, 1, topk_proposals.unsqueeze(-1).repeat(1, 1, 4)
+                enc_outputs_coord_unselected,
+                1,
+                topk_proposals.unsqueeze(-1).repeat(1, 1, 4),
             )  # unsigmoid
             refpoint_embed_ = refpoint_embed_undetach.detach()
             init_box_proposal = torch.gather(
@@ -311,7 +333,9 @@ class Transformer(nn.Module):
 
             # gather tgt
             tgt_undetach = torch.gather(
-                output_memory, 1, topk_proposals.unsqueeze(-1).repeat(1, 1, self.d_model)
+                output_memory,
+                1,
+                topk_proposals.unsqueeze(-1).repeat(1, 1, self.d_model),
             )
             if self.embed_init_tgt:
                 tgt_ = (
@@ -351,7 +375,7 @@ class Transformer(nn.Module):
             init_box_proposal = refpoint_embed_.sigmoid()
 
         else:
-            raise NotImplementedError("unknown two_stage_type {}".format(self.two_stage_type))
+            raise NotImplementedError(f"unknown two_stage_type {self.two_stage_type}")
         #########################################################
         # End preparing tgt
         # - tgt: bs, NQ, d_model
@@ -433,7 +457,9 @@ class TransformerEncoder(nn.Module):
         self.text_layers = []
         self.fusion_layers = []
         if num_layers > 0:
-            self.layers = _get_clones(encoder_layer, num_layers, layer_share=enc_layer_share)
+            self.layers = _get_clones(
+                encoder_layer, num_layers, layer_share=enc_layer_share
+            )
 
             if text_enhance_layer is not None:
                 self.text_layers = _get_clones(
@@ -466,7 +492,6 @@ class TransformerEncoder(nn.Module):
     def get_reference_points(spatial_shapes, valid_ratios, device):
         reference_points_list = []
         for lvl, (H_, W_) in enumerate(spatial_shapes):
-
             ref_y, ref_x = torch.meshgrid(
                 torch.linspace(0.5, H_ - 0.5, H_, dtype=torch.float32, device=device),
                 torch.linspace(0.5, W_ - 0.5, W_, dtype=torch.float32, device=device),
@@ -535,7 +560,9 @@ class TransformerEncoder(nn.Module):
                     .unsqueeze(-1)
                     .repeat(bs, 1, 1)
                 )
-                pos_text = get_sine_pos_embed(pos_text, num_pos_feats=256, exchange_xy=False)
+                pos_text = get_sine_pos_embed(
+                    pos_text, num_pos_feats=256, exchange_xy=False
+                )
             if position_ids is not None:
                 pos_text = get_sine_pos_embed(
                     position_ids[..., None], num_pos_feats=256, exchange_xy=False
@@ -617,7 +644,7 @@ class TransformerDecoder(nn.Module):
         self.return_intermediate = return_intermediate
         assert return_intermediate, "support return_intermediate only"
         self.query_dim = query_dim
-        assert query_dim in [2, 4], "query_dim should be 2/4 but {}".format(query_dim)
+        assert query_dim in [2, 4], f"query_dim should be 2/4 but {query_dim}"
         self.num_feature_levels = num_feature_levels
 
         self.ref_point_head = MLP(query_dim // 2 * d_model, d_model, d_model, 2)
@@ -635,19 +662,19 @@ class TransformerDecoder(nn.Module):
         self,
         tgt,
         memory,
-        tgt_mask: Optional[Tensor] = None,
-        memory_mask: Optional[Tensor] = None,
-        tgt_key_padding_mask: Optional[Tensor] = None,
-        memory_key_padding_mask: Optional[Tensor] = None,
-        pos: Optional[Tensor] = None,
-        refpoints_unsigmoid: Optional[Tensor] = None,  # num_queries, bs, 2
+        tgt_mask: Tensor | None = None,
+        memory_mask: Tensor | None = None,
+        tgt_key_padding_mask: Tensor | None = None,
+        memory_key_padding_mask: Tensor | None = None,
+        pos: Tensor | None = None,
+        refpoints_unsigmoid: Tensor | None = None,  # num_queries, bs, 2
         # for memory
-        level_start_index: Optional[Tensor] = None,  # num_levels
-        spatial_shapes: Optional[Tensor] = None,  # bs, num_levels, 2
-        valid_ratios: Optional[Tensor] = None,
+        level_start_index: Tensor | None = None,  # num_levels
+        spatial_shapes: Tensor | None = None,  # bs, num_levels, 2
+        valid_ratios: Tensor | None = None,
         # for text
-        memory_text: Optional[Tensor] = None,
-        text_attention_mask: Optional[Tensor] = None,
+        memory_text: Tensor | None = None,
+        text_attention_mask: Tensor | None = None,
     ):
         """
         Input:
@@ -664,7 +691,6 @@ class TransformerDecoder(nn.Module):
         ref_points = [reference_points]
 
         for layer_id, layer in enumerate(self.layers):
-
             if reference_points.shape[-1] == 4:
                 reference_points_input = (
                     reference_points[:, :, None]
@@ -672,7 +698,9 @@ class TransformerDecoder(nn.Module):
                 )  # nq, bs, nlevel, 4
             else:
                 assert reference_points.shape[-1] == 2
-                reference_points_input = reference_points[:, :, None] * valid_ratios[None, :]
+                reference_points_input = (
+                    reference_points[:, :, None] * valid_ratios[None, :]
+                )
             query_sine_embed = gen_sineembed_for_position(
                 reference_points_input[:, :, 0, :]
             )  # nq, bs, 256*2
@@ -779,7 +807,13 @@ class DeformableTransformerEncoderLayer(nn.Module):
         return src
 
     def forward(
-        self, src, pos, reference_points, spatial_shapes, level_start_index, key_padding_mask=None
+        self,
+        src,
+        pos,
+        reference_points,
+        spatial_shapes,
+        level_start_index,
+        key_padding_mask=None,
     ):
         # self attention
         # import ipdb; ipdb.set_trace()
@@ -869,22 +903,22 @@ class DeformableTransformerDecoderLayer(nn.Module):
     def forward(
         self,
         # for tgt
-        tgt: Optional[Tensor],  # nq, bs, d_model
-        tgt_query_pos: Optional[Tensor] = None,  # pos for query. MLP(Sine(pos))
-        tgt_query_sine_embed: Optional[Tensor] = None,  # pos for query. Sine(pos)
-        tgt_key_padding_mask: Optional[Tensor] = None,
-        tgt_reference_points: Optional[Tensor] = None,  # nq, bs, 4
-        memory_text: Optional[Tensor] = None,  # bs, num_token, d_model
-        text_attention_mask: Optional[Tensor] = None,  # bs, num_token
+        tgt: Tensor | None,  # nq, bs, d_model
+        tgt_query_pos: Tensor | None = None,  # pos for query. MLP(Sine(pos))
+        tgt_query_sine_embed: Tensor | None = None,  # pos for query. Sine(pos)
+        tgt_key_padding_mask: Tensor | None = None,
+        tgt_reference_points: Tensor | None = None,  # nq, bs, 4
+        memory_text: Tensor | None = None,  # bs, num_token, d_model
+        text_attention_mask: Tensor | None = None,  # bs, num_token
         # for memory
-        memory: Optional[Tensor] = None,  # hw, bs, d_model
-        memory_key_padding_mask: Optional[Tensor] = None,
-        memory_level_start_index: Optional[Tensor] = None,  # num_levels
-        memory_spatial_shapes: Optional[Tensor] = None,  # bs, num_levels, 2
-        memory_pos: Optional[Tensor] = None,  # pos for memory
+        memory: Tensor | None = None,  # hw, bs, d_model
+        memory_key_padding_mask: Tensor | None = None,
+        memory_level_start_index: Tensor | None = None,  # num_levels
+        memory_spatial_shapes: Tensor | None = None,  # bs, num_levels, 2
+        memory_pos: Tensor | None = None,  # pos for memory
         # sa
-        self_attn_mask: Optional[Tensor] = None,  # mask used for self-attention
-        cross_attn_mask: Optional[Tensor] = None,  # mask used for cross-attention
+        self_attn_mask: Tensor | None = None,  # mask used for self-attention
+        cross_attn_mask: Tensor | None = None,  # mask used for cross-attention
     ):
         """
         Input:

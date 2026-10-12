@@ -1,5 +1,6 @@
-from PIL import Image
 import numpy as np
+from PIL import Image
+
 
 def segment_image(image, segmentation_mask):
     image_array = np.array(image)
@@ -9,7 +10,7 @@ def segment_image(image, segmentation_mask):
     black_image = Image.new("RGB", image.size, (0, 0, 0))
     transparency_mask = np.zeros_like(segmentation_mask, dtype=np.uint8)
     transparency_mask[segmentation_mask] = 255
-    transparency_mask_image = Image.fromarray(transparency_mask, mode='L')
+    transparency_mask_image = Image.fromarray(transparency_mask, mode="L")
     black_image.paste(segmented_image, mask=transparency_mask_image)
     return black_image
 

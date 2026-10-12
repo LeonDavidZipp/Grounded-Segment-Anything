@@ -9,19 +9,18 @@ import gzip
 import html
 import io
 import math
+from collections.abc import Callable
 from functools import lru_cache
-from typing import Callable, List, Optional
 
 import ftfy
-
 import numpy as np
 import regex as re
 import torch
-import torch.nn as nn
 from iopath.common.file_io import g_pathmgr
 from timm.models.layers import trunc_normal_
+from torch import nn
 
-from models.helpers import cast_if_src_dtype, VerboseNNModule
+from models.helpers import VerboseNNModule, cast_if_src_dtype
 
 
 def get_sinusoid_encoding_table(n_position, d_hid):
@@ -75,9 +74,9 @@ def interpolate_pos_encoding(
     if npatch_per_img == N:
         return pos_embed
 
-    assert (
-        patches_layout[-1] == patches_layout[-2]
-    ), "Interpolation of pos embed not supported for non-square layouts"
+    assert patches_layout[-1] == patches_layout[-2], (
+        "Interpolation of pos embed not supported for non-square layouts"
+    )
 
     class_emb = pos_embed[:, :first_patch_idx]
     pos_embed = pos_embed[:, first_patch_idx:]
@@ -124,7 +123,7 @@ class PatchEmbedGeneric(nn.Module):
     PatchEmbed from Hydra
     """
 
-    def __init__(self, proj_stem, norm_layer: Optional[nn.Module] = None):
+    def __init__(self, proj_stem, norm_layer: nn.Module | None = None):
         super().__init__()
 
         if len(proj_stem) > 1:
@@ -161,7 +160,7 @@ class PatchEmbedGeneric(nn.Module):
 class SpatioTemporalPosEmbeddingHelper(VerboseNNModule):
     def __init__(
         self,
-        patches_layout: List,
+        patches_layout: list,
         num_patches: int,
         num_cls_tokens: int,
         embed_dim: int,
@@ -198,7 +197,7 @@ class RGBDTPreprocessor(VerboseNNModule):
         self,
         rgbt_stem: PatchEmbedGeneric,
         depth_stem: PatchEmbedGeneric,
-        img_size: List = (3, 224, 224),
+        img_size: list = (3, 224, 224),
         num_cls_tokens: int = 1,
         pos_embed_fn: Callable = None,
         use_type_embed: bool = False,
@@ -444,7 +443,7 @@ class PadIm2Video(Im2Video):
 
 
 # Modified from github.com/openai/CLIP
-@lru_cache()
+@lru_cache
 def bytes_to_unicode():
     """
     Returns list of utf-8 byte and a corresponding list of unicode strings.
@@ -495,7 +494,7 @@ def whitespace_clean(text):
     return text
 
 
-class SimpleTokenizer(object):
+class SimpleTokenizer:
     def __init__(self, bpe_path: str, context_length=77):
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
@@ -610,7 +609,7 @@ class IMUPreprocessor(VerboseNNModule):
         kernel_size: int,
         imu_stem: PatchEmbedGeneric,
         embed_dim: int,
-        img_size: List = (6, 2000),
+        img_size: list = (6, 2000),
         num_cls_tokens: int = 1,
         pos_embed_fn: Callable = None,
         init_param_style: str = "openclip",

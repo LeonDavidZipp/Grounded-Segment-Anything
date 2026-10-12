@@ -4,11 +4,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-from typing import Type
+import torch
+import torch.nn.functional as F
+from torch import nn
 
 
 class MLPBlock(nn.Module):
@@ -16,7 +15,7 @@ class MLPBlock(nn.Module):
         self,
         embedding_dim: int,
         mlp_dim: int,
-        act: Type[nn.Module] = nn.GELU,
+        act: type[nn.Module] = nn.GELU,
     ) -> None:
         super().__init__()
         self.lin1 = nn.Linear(embedding_dim, mlp_dim)
@@ -27,8 +26,8 @@ class MLPBlock(nn.Module):
         return self.lin2(self.act(self.lin1(x)))
 
 
-# From https://github.com/facebookresearch/detectron2/blob/main/detectron2/layers/batch_norm.py # noqa
-# Itself from https://github.com/facebookresearch/ConvNeXt/blob/d1fa8f6fef0a165b27399986cc2bdacc92777e40/models/convnext.py#L119  # noqa
+# From https://github.com/facebookresearch/detectron2/blob/main/detectron2/layers/batch_norm.py
+# Itself from https://github.com/facebookresearch/ConvNeXt/blob/d1fa8f6fef0a165b27399986cc2bdacc92777e40/models/convnext.py#L119
 class LayerNorm2d(nn.Module):
     def __init__(self, num_channels: int, eps: float = 1e-6) -> None:
         super().__init__()
@@ -65,11 +64,11 @@ def list_sum(x: list) -> any:
 
 
 def resize(
-        x: torch.Tensor,
-        size: any or None = None,
-        scale_factor=None,
-        mode: str = "bicubic",
-        align_corners: bool or None = False,
+    x: torch.Tensor,
+    size: any or None = None,
+    scale_factor=None,
+    mode: str = "bicubic",
+    align_corners: bool or None = False,
 ) -> torch.Tensor:
     if mode in ["bilinear", "bicubic"]:
         return F.interpolate(
@@ -87,13 +86,13 @@ def resize(
 
 class UpSampleLayer(nn.Module):
     def __init__(
-            self,
-            mode="bicubic",
-            size=None,
-            factor=2,
-            align_corners=False,
+        self,
+        mode="bicubic",
+        size=None,
+        factor=2,
+        align_corners=False,
     ):
-        super(UpSampleLayer, self).__init__()
+        super().__init__()
         self.mode = mode
         self.size = val2list(size, 2) if size is not None else None
         self.factor = None if self.size is not None else factor
@@ -105,7 +104,7 @@ class UpSampleLayer(nn.Module):
 
 class OpSequential(nn.Module):
     def __init__(self, op_list):
-        super(OpSequential, self).__init__()
+        super().__init__()
         valid_op_list = []
         for op in op_list:
             if op is not None:

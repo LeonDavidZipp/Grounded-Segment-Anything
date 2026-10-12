@@ -1,20 +1,19 @@
 # Prediction interface for Cog ⚙️
 # https://github.com/replicate/cog/blob/main/docs/python.md
 
-import os
 import json
+import os
+from subprocess import call
 from typing import Any
-import numpy as np
-import random
-import torch
-import torchvision
-import torchvision.transforms as transforms
-from PIL import Image
+
 import cv2
 import matplotlib.pyplot as plt
-from cog import BasePredictor, Input, Path, BaseModel
-
-from subprocess import call
+import numpy as np
+import torch
+import torchvision
+from cog import BaseModel, BasePredictor, Input, Path
+from PIL import Image
+from torchvision import transforms
 
 HOME = os.getcwd()
 os.chdir("GroundingDINO")
@@ -32,11 +31,10 @@ from GroundingDINO.groundingdino.util.utils import (
     clean_state_dict,
     get_phrases_from_posmap,
 )
+from ram.models import ram
 
 # segment anything
-from segment_anything import build_sam, build_sam_hq, SamPredictor
-
-from ram.models import ram
+from segment_anything import SamPredictor, build_sam, build_sam_hq
 
 
 class ModelOutput(BaseModel):

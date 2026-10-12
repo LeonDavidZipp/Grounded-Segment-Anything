@@ -258,7 +258,10 @@ python grounding_dino_demo.py
 from groundingdino.util.inference import load_model, load_image, predict, annotate
 import cv2
 
-model = load_model("GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py", "./groundingdino_swint_ogc.pth")
+model = load_model(
+    "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py",
+    "./groundingdino_swint_ogc.pth",
+)
 IMAGE_PATH = "assets/demo1.jpg"
 TEXT_PROMPT = "bear."
 BOX_THRESHOLD = 0.35
@@ -271,10 +274,12 @@ boxes, logits, phrases = predict(
     image=image,
     caption=TEXT_PROMPT,
     box_threshold=BOX_THRESHOLD,
-    text_threshold=TEXT_THRESHOLD
+    text_threshold=TEXT_THRESHOLD,
 )
 
-annotated_frame = annotate(image_source=image_source, boxes=boxes, logits=logits, phrases=phrases)
+annotated_frame = annotate(
+    image_source=image_source, boxes=boxes, logits=logits, phrases=phrases
+)
 cv2.imwrite("annotated_image.jpg", annotated_frame)
 ```
 

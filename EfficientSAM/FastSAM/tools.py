@@ -1,10 +1,11 @@
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
-import cv2
-import torch
 import os
+
 import clip
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from PIL import Image
 
 
 def convert_box_xywh_to_xyxy(box):
@@ -53,7 +54,7 @@ def format_results(result, filter=0):
 def filter_masks(annotations):  # filte the overlap mask
     annotations.sort(key=lambda x: x["area"], reverse=True)
     to_remove = set()
-    for i in range(0, len(annotations)):
+    for i in range(len(annotations)):
         a = annotations[i]
         for j in range(i + 1, len(annotations)):
             b = annotations[j]
@@ -98,7 +99,7 @@ def fast_process(
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     original_h = image.shape[0]
     original_w = image.shape[1]
-    plt.figure(figsize=(original_w/100, original_h/100))
+    plt.figure(figsize=(original_w / 100, original_h / 100))
     plt.imshow(image)
     if args.better_quality == True:
         if isinstance(annotations[0], torch.Tensor):
@@ -173,7 +174,6 @@ def fast_process(
     img_array = np.fromstring(buf, dtype=np.uint8).reshape(rows, cols, 3)
     return img_array
     # cv2.imwrite(os.path.join(save_path, result_name), cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR))
-
 
 
 #   CPU post process
@@ -310,9 +310,7 @@ def fast_show_mask_gpu(
 
 # clip
 @torch.no_grad()
-def retriev(
-    model, preprocess, elements, search_text: str, device
-) -> int:
+def retriev(model, preprocess, elements, search_text: str, device) -> int:
     preprocessed_images = [preprocess(image).to(device) for image in elements]
     tokenized_text = clip.tokenize([search_text]).to(device)
     stacked_images = torch.stack(preprocessed_images)
@@ -358,10 +356,10 @@ def box_prompt(masks, bbox, target_height, target_width):
             int(bbox[2] * w / target_width),
             int(bbox[3] * h / target_height),
         ]
-    bbox[0] = round(bbox[0]) if round(bbox[0]) > 0 else 0
-    bbox[1] = round(bbox[1]) if round(bbox[1]) > 0 else 0
-    bbox[2] = round(bbox[2]) if round(bbox[2]) < w else w
-    bbox[3] = round(bbox[3]) if round(bbox[3]) < h else h
+    bbox[0] = max(0, round(bbox[0]))
+    bbox[1] = max(0, round(bbox[1]))
+    bbox[2] = min(w, round(bbox[2]))
+    bbox[3] = min(h, round(bbox[3]))
 
     # IoUs = torch.zeros(len(masks), dtype=torch.float32)
     bbox_area = (bbox[3] - bbox[1]) * (bbox[2] - bbox[0])

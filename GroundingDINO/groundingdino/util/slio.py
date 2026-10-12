@@ -10,9 +10,10 @@ from pathlib import Path
 import yaml
 
 try:
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CDumper as Dumper
+    from yaml import CLoader as Loader
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import Dumper, Loader
 
 
 # ===========================
@@ -58,7 +59,7 @@ class PickleHandler(BaseFileHandler):
         return pickle.load(file, **kwargs)
 
     def load_from_path(self, filepath, **kwargs):
-        return super(PickleHandler, self).load_from_path(filepath, mode="rb", **kwargs)
+        return super().load_from_path(filepath, mode="rb", **kwargs)
 
     def dump_to_str(self, obj, **kwargs):
         kwargs.setdefault("protocol", 2)
@@ -69,7 +70,7 @@ class PickleHandler(BaseFileHandler):
         pickle.dump(obj, file, **kwargs)
 
     def dump_to_path(self, obj, filepath, **kwargs):
-        super(PickleHandler, self).dump_to_path(obj, filepath, mode="wb", **kwargs)
+        super().dump_to_path(obj, filepath, mode="wb", **kwargs)
 
 
 class YamlHandler(BaseFileHandler):

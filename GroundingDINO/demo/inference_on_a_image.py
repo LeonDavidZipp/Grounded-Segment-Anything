@@ -1,16 +1,13 @@
 import argparse
 import os
-import sys
-
-import numpy as np
-import torch
-from PIL import Image, ImageDraw, ImageFont
 
 import groundingdino.datasets.transforms as T
+import numpy as np
+import torch
 from groundingdino.models import build_model
-from groundingdino.util import box_ops
 from groundingdino.util.slconfig import SLConfig
 from groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
+from PIL import Image, ImageDraw, ImageFont
 
 
 def plot_boxes_to_image(image_pil, tgt):
@@ -74,13 +71,23 @@ def load_model(model_config_path, model_checkpoint_path, cpu_only=False):
     args.device = "cuda" if not cpu_only else "cpu"
     model = build_model(args)
     checkpoint = torch.load(model_checkpoint_path, map_location="cpu")
-    load_res = model.load_state_dict(clean_state_dict(checkpoint["model"]), strict=False)
+    load_res = model.load_state_dict(
+        clean_state_dict(checkpoint["model"]), strict=False
+    )
     print(load_res)
     _ = model.eval()
     return model
 
 
-def get_grounding_output(model, image, caption, box_threshold, text_threshold, with_logits=True, cpu_only=False):
+def get_grounding_output(
+    model,
+    image,
+    caption,
+    box_threshold,
+    text_threshold,
+    with_logits=True,
+    cpu_only=False,
+):
     caption = caption.lower()
     caption = caption.strip()
     if not caption.endswith("."):
@@ -108,7 +115,9 @@ def get_grounding_output(model, image, caption, box_threshold, text_threshold, w
     # build pred
     pred_phrases = []
     for logit, box in zip(logits_filt, boxes_filt):
-        pred_phrase = get_phrases_from_posmap(logit > text_threshold, tokenized, tokenlizer)
+        pred_phrase = get_phrases_from_posmap(
+            logit > text_threshold, tokenized, tokenlizer
+        )
         if with_logits:
             pred_phrases.append(pred_phrase + f"({str(logit.max().item())[:4]})")
         else:
@@ -118,22 +127,42 @@ def get_grounding_output(model, image, caption, box_threshold, text_threshold, w
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser("Grounding DINO example", add_help=True)
-    parser.add_argument("--config_file", "-c", type=str, required=True, help="path to config file")
     parser.add_argument(
-        "--checkpoint_path", "-p", type=str, required=True, help="path to checkpoint file"
+        "--config_file", "-c", type=str, required=True, help="path to config file"
     )
-    parser.add_argument("--image_path", "-i", type=str, required=True, help="path to image file")
-    parser.add_argument("--text_prompt", "-t", type=str, required=True, help="text prompt")
     parser.add_argument(
-        "--output_dir", "-o", type=str, default="outputs", required=True, help="output directory"
+        "--checkpoint_path",
+        "-p",
+        type=str,
+        required=True,
+        help="path to checkpoint file",
+    )
+    parser.add_argument(
+        "--image_path", "-i", type=str, required=True, help="path to image file"
+    )
+    parser.add_argument(
+        "--text_prompt", "-t", type=str, required=True, help="text prompt"
+    )
+    parser.add_argument(
+        "--output_dir",
+        "-o",
+        type=str,
+        default="outputs",
+        required=True,
+        help="output directory",
     )
 
-    parser.add_argument("--box_threshold", type=float, default=0.3, help="box threshold")
-    parser.add_argument("--text_threshold", type=float, default=0.25, help="text threshold")
+    parser.add_argument(
+        "--box_threshold", type=float, default=0.3, help="box threshold"
+    )
+    parser.add_argument(
+        "--text_threshold", type=float, default=0.25, help="text threshold"
+    )
 
-    parser.add_argument("--cpu-only", action="store_true", help="running on cpu only!, default=False")
+    parser.add_argument(
+        "--cpu-only", action="store_true", help="running on cpu only!, default=False"
+    )
     args = parser.parse_args()
 
     # cfg

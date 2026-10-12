@@ -1,31 +1,26 @@
 import argparse
 import os
-import copy
 
-import numpy as np
-import torch
-from PIL import Image, ImageDraw, ImageFont
+import cv2
 
 # Grounding DINO
 import GroundingDINO.groundingdino.datasets.transforms as T
-from GroundingDINO.groundingdino.models import build_model
-from GroundingDINO.groundingdino.util import box_ops
-from GroundingDINO.groundingdino.util.slconfig import SLConfig
-from GroundingDINO.groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
-
-# segment anything
-from segment_anything import build_sam, SamPredictor 
-import cv2
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 # diffusers
-import PIL
-import requests
 import torch
-from io import BytesIO
 from diffusers import StableDiffusionInpaintPipeline
+from GroundingDINO.groundingdino.models import build_model
+from GroundingDINO.groundingdino.util.slconfig import SLConfig
+from GroundingDINO.groundingdino.util.utils import (
+    clean_state_dict,
+    get_phrases_from_posmap,
+)
+from PIL import Image
+
+# segment anything
+from segment_anything import SamPredictor, build_sam
 
 
 def load_image(image_path):
@@ -48,13 +43,17 @@ def load_model(model_config_path, model_checkpoint_path, device):
     args.device = device
     model = build_model(args)
     checkpoint = torch.load(model_checkpoint_path, map_location="cpu")
-    load_res = model.load_state_dict(clean_state_dict(checkpoint["model"]), strict=False)
+    load_res = model.load_state_dict(
+        clean_state_dict(checkpoint["model"]), strict=False
+    )
     print(load_res)
     _ = model.eval()
     return model
 
 
-def get_grounding_output(model, image, caption, box_threshold, text_threshold, with_logits=True, device="cpu"):
+def get_grounding_output(
+    model, image, caption, box_threshold, text_threshold, with_logits=True, device="cpu"
+):
     caption = caption.lower()
     caption = caption.strip()
     if not caption.endswith("."):
@@ -81,7 +80,9 @@ def get_grounding_output(model, image, caption, box_threshold, text_threshold, w
     # build pred
     pred_phrases = []
     for logit, box in zip(logits_filt, boxes_filt):
-        pred_phrase = get_phrases_from_posmap(logit > text_threshold, tokenized, tokenlizer)
+        pred_phrase = get_phrases_from_posmap(
+            logit > text_threshold, tokenized, tokenlizer
+        )
         if with_logits:
             pred_phrases.append(pred_phrase + f"({str(logit.max().item())[:4]})")
         else:
@@ -89,11 +90,12 @@ def get_grounding_output(model, image, caption, box_threshold, text_threshold, w
 
     return boxes_filt, pred_phrases
 
+
 def show_mask(mask, ax, random_color=False):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
     else:
-        color = np.array([30/255, 144/255, 255/255, 0.6])
+        color = np.array([30 / 255, 144 / 255, 255 / 255, 0.6])
     h, w = mask.shape[-2:]
     mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
     ax.imshow(mask_image)
@@ -102,12 +104,13 @@ def show_mask(mask, ax, random_color=False):
 def show_box(box, ax, label):
     x0, y0 = box[0], box[1]
     w, h = box[2] - box[0], box[3] - box[1]
-    ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2)) 
+    ax.add_patch(
+        plt.Rectangle((x0, y0), w, h, edgecolor="green", facecolor=(0, 0, 0, 0), lw=2)
+    )
     ax.text(x0, y0, label)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser("Grounded-Segment-Anything Demo", add_help=True)
     parser.add_argument("--config", type=str, required=True, help="path to config file")
     parser.add_argument(
@@ -116,17 +119,39 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sam_checkpoint", type=str, required=True, help="path to checkpoint file"
     )
-    parser.add_argument("--input_image", type=str, required=True, help="path to image file")
-    parser.add_argument("--det_prompt", type=str, required=True, help="text prompt")
-    parser.add_argument("--inpaint_prompt", type=str, required=True, help="inpaint prompt")
     parser.add_argument(
-        "--output_dir", "-o", type=str, default="outputs", required=True, help="output directory"
+        "--input_image", type=str, required=True, help="path to image file"
     )
-    parser.add_argument("--cache_dir", type=str, default=None, help="save your huggingface large model cache")
-    parser.add_argument("--box_threshold", type=float, default=0.3, help="box threshold")
-    parser.add_argument("--text_threshold", type=float, default=0.25, help="text threshold")
-    parser.add_argument("--inpaint_mode", type=str, default="first", help="inpaint mode")
-    parser.add_argument("--device", type=str, default="cpu", help="running on cpu only!, default=False")
+    parser.add_argument("--det_prompt", type=str, required=True, help="text prompt")
+    parser.add_argument(
+        "--inpaint_prompt", type=str, required=True, help="inpaint prompt"
+    )
+    parser.add_argument(
+        "--output_dir",
+        "-o",
+        type=str,
+        default="outputs",
+        required=True,
+        help="output directory",
+    )
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default=None,
+        help="save your huggingface large model cache",
+    )
+    parser.add_argument(
+        "--box_threshold", type=float, default=0.3, help="box threshold"
+    )
+    parser.add_argument(
+        "--text_threshold", type=float, default=0.25, help="text threshold"
+    )
+    parser.add_argument(
+        "--inpaint_mode", type=str, default="first", help="inpaint mode"
+    )
+    parser.add_argument(
+        "--device", type=str, default="cpu", help="running on cpu only!, default=False"
+    )
     args = parser.parse_args()
 
     # cfg
@@ -137,7 +162,7 @@ if __name__ == "__main__":
     det_prompt = args.det_prompt
     inpaint_prompt = args.inpaint_prompt
     output_dir = args.output_dir
-    cache_dir=args.cache_dir
+    cache_dir = args.cache_dir
     box_threshold = args.box_threshold
     text_threshold = args.text_threshold
     inpaint_mode = args.inpaint_mode
@@ -172,13 +197,15 @@ if __name__ == "__main__":
         boxes_filt[i][2:] += boxes_filt[i][:2]
 
     boxes_filt = boxes_filt.cpu()
-    transformed_boxes = predictor.transform.apply_boxes_torch(boxes_filt, image.shape[:2]).to(device)
+    transformed_boxes = predictor.transform.apply_boxes_torch(
+        boxes_filt, image.shape[:2]
+    ).to(device)
 
     masks, _, _ = predictor.predict_torch(
-        point_coords = None,
-        point_labels = None,
-        boxes = transformed_boxes.to(device),
-        multimask_output = False,
+        point_coords=None,
+        point_labels=None,
+        boxes=transformed_boxes.to(device),
+        multimask_output=False,
     )
 
     # masks: [1, 1, 512, 512]
@@ -190,19 +217,25 @@ if __name__ == "__main__":
         show_mask(mask.cpu().numpy(), plt.gca(), random_color=True)
     for box, label in zip(boxes_filt, pred_phrases):
         show_box(box.numpy(), plt.gca(), label)
-    plt.axis('off')
-    plt.savefig(os.path.join(output_dir, "grounded_sam_output.jpg"), bbox_inches="tight")
+    plt.axis("off")
+    plt.savefig(
+        os.path.join(output_dir, "grounded_sam_output.jpg"), bbox_inches="tight"
+    )
 
     # inpainting pipeline
-    if inpaint_mode == 'merge':
+    if inpaint_mode == "merge":
         masks = torch.sum(masks, dim=0).unsqueeze(0)
         masks = torch.where(masks > 0, True, False)
-    mask = masks[0][0].cpu().numpy() # simply choose the first mask, which will be refine in the future release
+    mask = (
+        masks[0][0].cpu().numpy()
+    )  # simply choose the first mask, which will be refine in the future release
     mask_pil = Image.fromarray(mask)
     image_pil = Image.fromarray(image)
-    
+
     pipe = StableDiffusionInpaintPipeline.from_pretrained(
-    "runwayml/stable-diffusion-inpainting", torch_dtype=torch.float16,cache_dir=cache_dir
+        "runwayml/stable-diffusion-inpainting",
+        torch_dtype=torch.float16,
+        cache_dir=cache_dir,
     )
     pipe = pipe.to("cuda")
 
@@ -212,5 +245,3 @@ if __name__ == "__main__":
     image = pipe(prompt=inpaint_prompt, image=image_pil, mask_image=mask_pil).images[0]
     image = image.resize(size)
     image.save(os.path.join(output_dir, "grounded_sam_inpainting_output.jpg"))
-
-

@@ -5,19 +5,17 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import logging
 import math
 
 import torch
-import torch.nn as nn
 import torchaudio
-import logging
-
 from models.multimodal_preprocessors import SimpleTokenizer
 from PIL import Image
 from pytorchvideo import transforms as pv_transforms
 from pytorchvideo.data.clip_sampling import ConstantClipsPerVideoSampler
 from pytorchvideo.data.encoded_video import EncodedVideo
-
+from torch import nn
 from torchvision import transforms
 from torchvision.transforms._transforms_video import NormalizeVideo
 
@@ -75,6 +73,7 @@ def get_clip_timepoints(clip_sampler, duration):
         all_clips_timepoints.append((start, end))
     return all_clips_timepoints
 
+
 def load_and_transform_vision_data_from_pil_image(img_list, device):
     if img_list is None:
         return None
@@ -98,6 +97,7 @@ def load_and_transform_vision_data_from_pil_image(img_list, device):
         image = data_transform(image).to(device)
         image_ouputs.append(image)
     return torch.stack(image_ouputs, dim=0)
+
 
 def load_and_transform_vision_data(image_paths, device):
     if image_paths is None:
@@ -348,7 +348,7 @@ def load_and_transform_video_data(
             video_path,
             decoder="decord",
             decode_audio=False,
-            **{"sample_rate": sample_rate},
+            sample_rate=sample_rate,
         )
 
         all_clips_timepoints = get_clip_timepoints(clip_sampler, video.duration)

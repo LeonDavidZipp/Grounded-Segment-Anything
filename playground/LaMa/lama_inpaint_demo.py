@@ -1,7 +1,7 @@
 import cv2
+import numpy as np
 import PIL
 import requests
-import numpy as np
 from lama_cleaner.model.lama import LaMa
 from lama_cleaner.schema import Config
 
@@ -21,5 +21,15 @@ mask = np.asarray(download_image(mask_url).convert("L"))
 
 # set to GPU for faster inference
 model = LaMa("cpu")
-result = model(image, mask, Config(hd_strategy="Original", ldm_steps=20, hd_strategy_crop_margin=128, hd_strategy_crop_trigger_size=800, hd_strategy_resize_limit=800))
+result = model(
+    image,
+    mask,
+    Config(
+        hd_strategy="Original",
+        ldm_steps=20,
+        hd_strategy_crop_margin=128,
+        hd_strategy_crop_trigger_size=800,
+        hd_strategy_resize_limit=800,
+    ),
+)
 cv2.imwrite("lama_inpaint_demo.jpg", result)
